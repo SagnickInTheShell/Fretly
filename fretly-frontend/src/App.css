@@ -1,0 +1,231 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 40px 20px;
+  text-align: center;
+  border-bottom: 2px solid #1db954;
+}
+
+.header h1 {
+  font-size: 3rem;
+  color: #1db954;
+  margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(29, 185, 84, 0.5);
+}
+
+.header p {
+  font-size: 1.2rem;
+  color: #aaa;
+}
+
+/* Container */
+.container {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+/* Cards */
+.card {
+  background: rgba(20, 20, 30, 0.8);
+  border: 1px solid #1db954;
+  border-radius: 10px;
+  padding: 30px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(29, 185, 84, 0.1);
+}
+
+.card h2 {
+  color: #1db954;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+/* Upload Section */
+.upload-card {
+  text-align: center;
+}
+
+.upload-card input {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px dashed #1db954;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.upload-card button,
+.rec-btn {
+  padding: 12px 30px;
+  background: #1db954;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.upload-card button:hover:not(:disabled),
+.rec-btn:hover:not(:disabled) {
+  background: #1ed760;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(29, 185, 84, 0.4);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  color: #888;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+/* Table */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(29, 185, 84, 0.2);
+}
+
+th {
+  background: rgba(29, 185, 84, 0.2);
+  color: #1db954;
+  font-weight: bold;
+}
+
+tr:hover {
+  background: rgba(29, 185, 84, 0.05);
+}
+
+/* Badges */
+.energy-badge {
+  background: rgba(29, 185, 84, 0.2);
+  color: #1db954;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.mood-badge {
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.mood-energetic {
+  background: rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.mood-normal {
+  background: rgba(74, 144, 226, 0.3);
+  color: #4a90e2;
+}
+
+.mood-chill {
+  background: rgba(65, 189, 177, 0.3);
+  color: #41bdb1;
+}
+
+.similarity-score {
+  background: rgba(29, 185, 84, 0.3);
+  color: #1db954;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* Recommendations */
+.recommendations-card {
+  margin-top: 40px;
+  border: 2px solid #1db954;
+}
+
+.song-info {
+  background: rgba(29, 185, 84, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.song-info p {
+  margin: 8px 0;
+  color: #ddd;
+}
+
+.empty {
+  text-align: center;
+  color: #888;
+  padding: 40px 20px;
+  font-size: 1.1rem;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  border-top: 1px solid rgba(29, 185, 84, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 2rem;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 10px;
+  }
+}

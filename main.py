@@ -36,7 +36,18 @@ try:
 except Exception as e:
     print(f"Warning: Database connection failed during startup: {e}")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Fretly API")
+
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Dependency to safely manage database session lifecycle
 def get_db():
