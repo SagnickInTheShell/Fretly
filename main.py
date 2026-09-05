@@ -1,5 +1,7 @@
 import os
-from fastapi import FastAPI, Depends
+from io import StringIO
+from fastapi import FastAPI, Depends, UploadFile, File
+from pandas import read_csv
 from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from dotenv import load_dotenv
@@ -50,3 +52,24 @@ def read_root():
 def get_songs(db: Session = Depends(get_db)):
     songs = db.query(Song).all()
     return songs
+
+@app.post("/upload")
+async def upload_playlist(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        contents = await file.read()
+        df = read_csv(StringIO(contents.decode('utf-8')))
+        
+        for index, row in df.iterrows():
+            song = Song(
+                name=str(row['name']),
+                artist=str(row['artist']),
+                energy=float(row['energy']),
+                mood=str(row['mood'])
+            )
+            db.add(song)
+        db.commit()
+        
+        return {"status": "success", "songs_uploaded": len(df)}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
