@@ -4,6 +4,7 @@ from fastapi import FastAPI, Depends, UploadFile, File
 from pandas import read_csv
 from sklearn.cluster import KMeans
 import numpy as np
+from scipy.spatial.distance import cosine
 from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from dotenv import load_dotenv
@@ -105,4 +106,44 @@ def cluster_songs(db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@app.post("/recommend")
+def recommend_songs(song_id: int, limit: int = 5, db: Session = Depends(get_db)):
+    try:
+        # Get the target song
+        target_song = db.query(Song).filter(Song.song_id == song_id).first()
+        if not target_song:
+            return {"status": "error", "message": "Song not found"}
+        
+        # Get all other songs
+        all_songs = db.query(Song).filter(Song.song_id != song_id).all()
+        
+        # Calculate similarity (based on energy)
+        similarities = []
+        for song in all_songs:
+            similarity = 1 - abs(target_song.energy - song.energy)
+            similarities.append({
+                "song_id": song.song_id,
+                "name": song.name,
+                "artist": song.artist,
+                "energy": song.energy,
+                "mood": song.mood,
+                "similarity": round(float(similarity), 2)
+            })
+        
+        # Sort by similarity (highest first)
+        similarities.sort(key=lambda x: x["similarity"], reverse=True)
+        
+        return {
+            "status": "success",
+            "original_song": {
+                "name": target_song.name,
+                "artist": target_song.artist,
+                "energy": target_song.energy,
+                "mood": target_song.mood
+            },
+            "recommendations": similarities[:limit]
+        }
+    except Exception as e:
         return {"status": "error", "message": str(e)}
