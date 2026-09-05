@@ -76,32 +76,44 @@ function App() {
 
   return (
     <div className="App">
-      <header className="header">
-        <h1>🎵 FRETLY</h1>
+      <header className="app-header">
+        <h1>
+          <span className="icon">🎵</span>
+          <span className="text">FRETLY</span>
+        </h1>
         <p>AI-Powered Music Recommendation System</p>
       </header>
 
-      <div className="container">
+      <main className="container">
         {/* Upload Section */}
-        <div className="card upload-card">
-          <h2>📤 Upload Songs</h2>
-          <input 
-            type="file" 
-            onChange={handleUpload} 
-            accept=".csv"
-            disabled={loading}
-          />
-          <button onClick={clusterSongs} disabled={loading}>
+        <section className="card">
+          <h2>
+            <span className="icon">📤</span>
+            <span className="label">Upload Songs</span>
+          </h2>
+          <div className="file-input-wrapper">
+            <input 
+              type="file" 
+              onChange={handleUpload} 
+              accept=".csv"
+              disabled={loading}
+            />
+          </div>
+          <button className="btn-primary" onClick={clusterSongs} disabled={loading}>
             {loading ? "Processing..." : "🎯 Cluster by Mood"}
           </button>
-          <p className="hint">Upload CSV with columns: name, artist, energy, mood</p>
-        </div>
+          <p className="helper-text">Upload CSV with columns: name, artist, energy, mood</p>
+        </section>
 
         {/* Songs Table */}
-        <div className="card songs-card">
-          <h2>🎶 All Songs ({songs.length})</h2>
+        <section className="card">
+          <div className="songs-header">
+            <span className="icon">🎶</span>
+            <span className="label">All Songs ({songs.length})</span>
+          </div>
+          
           {songs.length === 0 ? (
-            <p className="empty">No songs yet. Upload a CSV file!</p>
+            <div className="songs-panel-empty">No songs yet. Upload a CSV file!</div>
           ) : (
             <div className="table-wrapper">
               <table>
@@ -142,12 +154,15 @@ function App() {
               </table>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Recommendations Section */}
         {selectedSong && (
-          <div className="card recommendations-card">
-            <h2>🎯 Recommendations for "{selectedSong.name}"</h2>
+          <section className="card recommendations-card">
+            <h2>
+              <span className="icon">🎯</span>
+              <span className="label">Recommendations for "{selectedSong.name}"</span>
+            </h2>
             <div className="song-info">
               <p><strong>Artist:</strong> {selectedSong.artist}</p>
               <p><strong>Energy:</strong> {selectedSong.energy}</p>
@@ -155,7 +170,7 @@ function App() {
             </div>
             
             {recommendations.length === 0 ? (
-              <p className="empty">No recommendations available</p>
+              <div className="songs-panel-empty">No recommendations available</div>
             ) : (
               <div className="table-wrapper">
                 <table>
@@ -192,9 +207,9 @@ function App() {
                 </table>
               </div>
             )}
-          </div>
+          </section>
         )}
-      </div>
+      </main>
 
       <footer className="footer">
         <p>Made with ❤️ | Fretly v1.0</p>
