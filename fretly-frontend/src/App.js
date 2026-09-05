@@ -12,6 +12,7 @@ function App() {
   const [activeMoodFilter, setActiveMoodFilter] = useState('All');
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(103);
   const [totalPlaybackTime] = useState(234);
+  const [spotifyUrl, setSpotifyUrl] = useState("");
   const fileInputRef = useRef(null);
 
   const API_URL = "http://127.0.0.1:8000";
@@ -68,6 +69,32 @@ function App() {
       scrollToSection('library');
     } catch (error) {
       alert("❌ Upload failed! Make sure FastAPI backend is running.");
+    }
+    setLoading(false);
+  };
+
+  const uploadSpotify = async () => {
+    if (!spotifyUrl.trim()) {
+      alert("Please enter a valid Spotify playlist URL");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/upload-spotify?playlist_url=${encodeURIComponent(spotifyUrl.trim())}`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (data.status === "success") {
+        alert(`✅ Uploaded ${data.songs_uploaded} songs from Spotify!`);
+        setSpotifyUrl("");
+        await fetchSongs();
+        scrollToSection('library');
+      } else {
+        alert(`❌ Spotify upload failed: ${data.message}`);
+      }
+    } catch (error) {
+      alert("❌ Spotify upload failed! Make sure backend is running.");
     }
     setLoading(false);
   };
@@ -424,8 +451,8 @@ function App() {
           <div className="workspace-control-card">
             <div className="control-card-header">
               <div>
-                <h3>Playlist Control & AI Cluster</h3>
-                <p>Upload new CSV playlist tracks and run K-Means mood clustering</p>
+                <h3>Upload Tracks & AI Clustering</h3>
+                <p>Import playlist via CSV file or paste any public Spotify playlist URL</p>
               </div>
               <div className="control-actions">
                 <button 
@@ -443,6 +470,28 @@ function App() {
                   {loading ? "Clustering..." : "🎯 Cluster by Mood"}
                 </button>
               </div>
+            </div>
+
+            {/* Spotify Playlist Import Row */}
+            <div className="spotify-import-box">
+              <div className="spotify-input-wrapper">
+                <span className="spotify-icon">🟢</span>
+                <input 
+                  type="text" 
+                  className="spotify-input"
+                  placeholder="Paste Spotify Playlist URL (e.g. https://open.spotify.com/playlist/...)"
+                  value={spotifyUrl}
+                  onChange={(e) => setSpotifyUrl(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <button 
+                className="btn-spotify-upload"
+                onClick={uploadSpotify}
+                disabled={loading}
+              >
+                {loading ? "Importing..." : "Import from Spotify"}
+              </button>
             </div>
           </div>
 

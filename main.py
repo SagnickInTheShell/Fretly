@@ -158,3 +158,58 @@ def recommend_songs(song_id: int, limit: int = 5, db: Session = Depends(get_db))
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+
+@app.post("/upload-spotify")
+def upload_spotify(playlist_url: str, db: Session = Depends(get_db)):
+    try:
+        client_id = os.getenv("SPOTIFY_CLIENT_ID", "")
+        client_secret = os.getenv("SPOTIFY_CLIENT_SECRET", "")
+        
+        if not client_id or not client_secret:
+            return {
+                "status": "error", 
+                "message": "Spotify API credentials not set. Please add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to your .env file."
+            }
+        
+        sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+            client_id=client_id,
+            client_secret=client_secret
+        ))
+        
+        # Extract playlist ID from URL
+        if "playlist/" in playlist_url:
+            playlist_id = playlist_url.split("playlist/")[1].split("?")[0]
+        else:
+            playlist_id = playlist_url.strip()
+        
+        # Fetch playlist tracks
+        results = sp.playlist_tracks(playlist_id)
+        count = 0
+        
+        for item in results.get('items', []):
+            track = item.get('track')
+            if track and track.get('id'):
+                try:
+                    features_list = sp.audio_features(track['id'])
+                    audio_features = features_list[0] if features_list else None
+                    energy = float(audio_features['energy']) if audio_features and 'energy' in audio_features else 0.5
+                except Exception:
+                    energy = 0.5
+                
+                song = Song(
+                    name=str(track.get('name', 'Unknown Track')),
+                    artist=str(track['artists'][0]['name']) if track.get('artists') else 'Unknown Artist',
+                    energy=energy,
+                    mood="Unknown"
+                )
+                db.add(song)
+                count += 1
+        
+        db.commit()
+        return {"status": "success", "songs_uploaded": count}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
