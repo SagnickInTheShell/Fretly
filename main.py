@@ -2,6 +2,8 @@ import os
 from io import StringIO
 from fastapi import FastAPI, Depends, UploadFile, File
 from pandas import read_csv
+from sklearn.cluster import KMeans
+import numpy as np
 from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from dotenv import load_dotenv
@@ -70,6 +72,37 @@ async def upload_playlist(file: UploadFile = File(...), db: Session = Depends(ge
         db.commit()
         
         return {"status": "success", "songs_uploaded": len(df)}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@app.post("/cluster")
+def cluster_songs(db: Session = Depends(get_db)):
+    try:
+        songs = db.query(Song).all()
+        
+        if len(songs) < 3:
+            return {"status": "error", "message": "Need at least 3 songs"}
+        
+        # Extract features (energy values)
+        features = np.array([[song.energy] for song in songs]).reshape(-1, 1)
+        
+        # K-means clustering (3 moods)
+        kmeans = KMeans(n_clusters=3, random_state=42)
+        clusters = kmeans.fit_predict(features)
+        
+        # Update songs with mood cluster
+        mood_labels = ["Chill", "Normal", "Energetic"]
+        for i, song in enumerate(songs):
+            song.mood = mood_labels[clusters[i]]
+        
+        db.commit()
+        
+        return {
+            "status": "success", 
+            "clustered_songs": len(songs),
+            "moods": mood_labels
+        }
     except Exception as e:
         db.rollback()
         return {"status": "error", "message": str(e)}
