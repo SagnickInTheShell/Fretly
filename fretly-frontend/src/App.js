@@ -7,27 +7,14 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isRepeat, setIsRepeat] = useState(false);
   const [activeMoodFilter, setActiveMoodFilter] = useState('All');
-  const [currentPlaybackTime, setCurrentPlaybackTime] = useState(103); // 1:43 in seconds
-  const [totalPlaybackTime] = useState(234); // 3:54 in seconds
+  const [currentPlaybackTime, setCurrentPlaybackTime] = useState(103);
+  const [totalPlaybackTime] = useState(234);
   const fileInputRef = useRef(null);
 
   const API_URL = "http://127.0.0.1:8000";
-
-  useEffect(() => {
-    fetchSongs();
-  }, []);
-
-  // Timer simulation for player
-  useEffect(() => {
-    let interval;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentPlaybackTime(prev => (prev >= totalPlaybackTime ? 0 : prev + 1));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, totalPlaybackTime]);
 
   const fetchSongs = async () => {
     try {
@@ -41,6 +28,26 @@ function App() {
       console.warn("Backend not running or offline:", error);
     }
   };
+
+  useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  // Timer simulation for player
+  useEffect(() => {
+    let interval;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setCurrentPlaybackTime(prev => {
+          if (prev >= totalPlaybackTime) {
+            return isRepeat ? 0 : totalPlaybackTime;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, totalPlaybackTime, isRepeat]);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -58,6 +65,7 @@ function App() {
       const data = await response.json();
       alert(`✅ Uploaded ${data.songs_uploaded} songs!`);
       await fetchSongs();
+      scrollToSection('library');
     } catch (error) {
       alert("❌ Upload failed! Make sure FastAPI backend is running.");
     }
@@ -71,8 +79,9 @@ function App() {
         method: "POST",
       });
       const data = await response.json();
-      alert(`✅ Songs clustered into moods: ${data.moods ? data.moods.join(', ') : 'Chill, Normal, Energetic'}!`);
+      alert(`✅ Songs clustered by mood! (${data.clustered_songs} songs)`);
       await fetchSongs();
+      scrollToSection('library');
     } catch (error) {
       alert("❌ Clustering failed! Make sure at least 3 songs are uploaded.");
     }
@@ -82,6 +91,7 @@ function App() {
   const getRecommendations = async (song) => {
     setLoading(true);
     setSelectedSong(song);
+    setIsPlaying(true);
     try {
       const response = await fetch(`${API_URL}/recommend?song_id=${song.song_id}`, {
         method: "POST",
@@ -89,6 +99,7 @@ function App() {
       const data = await response.json();
       if (data.status === "success") {
         setRecommendations(data.recommendations);
+        scrollToSection('recommendations');
       } else {
         alert(data.message || "Failed to fetch recommendations");
       }
@@ -98,6 +109,40 @@ function App() {
     setLoading(false);
   };
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Next / Previous song logic
+  const playNextSong = () => {
+    if (songs.length === 0) return;
+    const currentIndex = songs.findIndex(s => s.song_id === selectedSong?.song_id);
+    const nextIndex = (currentIndex + 1) % songs.length;
+    setSelectedSong(songs[nextIndex]);
+    setCurrentPlaybackTime(0);
+    setIsPlaying(true);
+  };
+
+  const playPrevSong = () => {
+    if (songs.length === 0) return;
+    const currentIndex = songs.findIndex(s => s.song_id === selectedSong?.song_id);
+    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
+    setSelectedSong(songs[prevIndex]);
+    setCurrentPlaybackTime(0);
+    setIsPlaying(true);
+  };
+
+  const shuffleSong = () => {
+    if (songs.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * songs.length);
+    setSelectedSong(songs[randomIndex]);
+    setCurrentPlaybackTime(0);
+    setIsPlaying(true);
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -105,12 +150,12 @@ function App() {
   };
 
   const moodsList = [
-    { name: "Viral Hits", desc: "Today's top tracks", count: "50 songs", tag: "Energetic", color: "#EC4899", icon: "🔥", img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&auto=format&fit=crop&q=80" },
-    { name: "Chill Vibes", desc: "Relax & unwind", count: "50 songs", tag: "Chill", color: "#8B5CF6", icon: "☁️", img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&auto=format&fit=crop&q=80" },
-    { name: "Workout", desc: "High energy beats", count: "50 songs", tag: "Energetic", color: "#F43F5E", icon: "⚡", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&auto=format&fit=crop&q=80" },
-    { name: "Late Night", desc: "Smooth night vibes", count: "40 songs", tag: "Chill", color: "#6366F1", icon: "🌃", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80" },
-    { name: "Pop Anthems", desc: "Ultimate pop hits", count: "60 songs", tag: "Normal", color: "#D946EF", icon: "✨", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&auto=format&fit=crop&q=80" },
-    { name: "Rock Classics", desc: "Timeless rock legends", count: "55 songs", tag: "Energetic", color: "#A855F7", icon: "🎸", img: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&auto=format&fit=crop&q=80" }
+    { name: "Viral Hits", desc: "Top trending beats", count: "Energetic", tag: "Energetic", img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&auto=format&fit=crop&q=80" },
+    { name: "Chill Vibes", desc: "Relax & unwind", count: "Chill", tag: "Chill", img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&auto=format&fit=crop&q=80" },
+    { name: "Workout", desc: "High energy rhythms", count: "Energetic", tag: "Energetic", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&auto=format&fit=crop&q=80" },
+    { name: "Late Night", desc: "Smooth midnight focus", count: "Chill", tag: "Chill", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80" },
+    { name: "Pop Anthems", desc: "Melodic hits", count: "Normal", tag: "Normal", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&auto=format&fit=crop&q=80" },
+    { name: "Rock Classics", desc: "Timeless guitar solos", count: "Energetic", tag: "Energetic", img: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&auto=format&fit=crop&q=80" }
   ];
 
   const filteredSongs = activeMoodFilter === 'All' 
@@ -118,23 +163,32 @@ function App() {
     : songs.filter(s => s.mood?.toLowerCase() === activeMoodFilter.toLowerCase());
 
   // Current playing song display data
-  const currentSongName = selectedSong?.name || "Midnight Drive";
-  const currentSongArtist = selectedSong?.artist || "Euphoria";
-  const currentSongMood = selectedSong?.mood || "Energetic";
-  const currentSongEnergy = selectedSong?.energy !== undefined ? selectedSong.energy : 0.85;
+  const currentSongName = selectedSong?.name || (songs.length > 0 ? songs[0].name : "Upload a Song to Play");
+  const currentSongArtist = selectedSong?.artist || (songs.length > 0 ? songs[0].artist : "Fretly AI");
+  const currentSongMood = selectedSong?.mood || "Chill";
+  const currentSongEnergy = selectedSong?.energy !== undefined ? selectedSong.energy : 0.8;
 
   return (
     <div className="fretly-app">
-      {/* Background Glowing Ambient Light Trails */}
+      {/* Ambient Glowing Neon Background */}
       <div className="ambient-glow ambient-glow-pink"></div>
       <div className="ambient-glow ambient-glow-purple"></div>
       <div className="laser-ribbon laser-ribbon-left"></div>
       <div className="laser-ribbon laser-ribbon-right"></div>
 
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        onChange={handleUpload}
+        accept=".csv"
+        style={{ display: 'none' }}
+      />
+
       {/* Navigation Bar */}
       <nav className="navbar">
         <div className="nav-container">
-          <div className="nav-brand">
+          <div className="nav-brand" onClick={() => scrollToSection('home')}>
             <div className="brand-waves">
               <span></span><span></span><span></span><span></span><span></span>
             </div>
@@ -142,23 +196,15 @@ function App() {
           </div>
 
           <div className="nav-links">
-            <a href="#home" className="nav-link active">Home</a>
-            <a href="#explore" className="nav-link">Explore</a>
-            <a href="#library" className="nav-link">Playlists</a>
-            <a href="#recommendations" className="nav-link">Artists</a>
-            <a href="#premium" className="nav-link">Pricing</a>
+            <button className="nav-link-btn" onClick={() => scrollToSection('home')}>Home</button>
+            <button className="nav-link-btn" onClick={() => scrollToSection('explore')}>Moods</button>
+            <button className="nav-link-btn" onClick={() => scrollToSection('library')}>Songs ({songs.length})</button>
+            <button className="nav-link-btn" onClick={() => scrollToSection('recommendations')}>Recommendations</button>
           </div>
 
           <div className="nav-actions">
-            <button className="btn-get-app" onClick={() => fileInputRef.current?.click()}>
-              <span>Upload CSV</span>
-            </button>
-            <button className="btn-menu" aria-label="Menu">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
+            <button className="btn-get-app" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+              <span>+ Upload CSV</span>
             </button>
           </div>
         </div>
@@ -176,25 +222,35 @@ function App() {
         </h1>
         
         <p className="hero-subtitle">
-          Stream millions of songs, discover new artists, and create the perfect soundtrack to your life with AI-driven clustering & energy matching.
+          Intelligent AI music recommendation engine. Cluster songs by mood and discover similar high-energy tracks instantly.
         </p>
 
         <div className="hero-buttons">
-          <button className="btn-hero-primary" onClick={clusterSongs} disabled={loading}>
-            <span>{loading ? "Processing..." : "Start Listening ▶"}</span>
+          <button 
+            className="btn-hero-primary" 
+            onClick={() => {
+              setIsPlaying(true);
+              scrollToSection('library');
+            }}
+          >
+            <span>Start Listening ▶</span>
           </button>
           
-          <button className="btn-hero-secondary" onClick={() => fileInputRef.current?.click()} disabled={loading}>
-            <span>Upload Songs 📤</span>
+          <button 
+            className="btn-hero-secondary" 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={loading}
+          >
+            <span>Upload CSV 📤</span>
           </button>
 
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleUpload}
-            accept=".csv"
-            style={{ display: 'none' }}
-          />
+          <button 
+            className="btn-hero-cluster" 
+            onClick={clusterSongs} 
+            disabled={loading}
+          >
+            <span>{loading ? "Processing..." : "🎯 Cluster by Mood"}</span>
+          </button>
         </div>
 
         {/* Centerpiece Glassmorphic Music Player */}
@@ -208,8 +264,8 @@ function App() {
                 className="cover-img"
               />
               <div className="cover-overlay">
-                <span className="cover-title">EUPHORIA</span>
-                <span className="cover-sub">MIDNIGHT DRIVE</span>
+                <span className="cover-title">{currentSongName.toUpperCase()}</span>
+                <span className="cover-sub">{currentSongArtist.toUpperCase()}</span>
               </div>
             </div>
 
@@ -217,9 +273,9 @@ function App() {
             <div className="player-info">
               <div className="player-meta-top">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span className="player-tag">Now Playing</span>
-                    <span className={`neon-pill pill-${currentSongMood.toLowerCase()}`} style={{ padding: '2px 8px', fontSize: '10px' }}>
+                    <span className={`neon-pill pill-${currentSongMood.toLowerCase()}`}>
                       {currentSongMood} • {(currentSongEnergy * 100).toFixed(0)}% Energy
                     </span>
                   </div>
@@ -229,13 +285,18 @@ function App() {
                   </p>
                 </div>
                 <div className="player-top-actions">
-                  <button className="btn-icon heart-active" title="Like song">♥</button>
-                  <button className="btn-icon" title="Options">•••</button>
+                  <button 
+                    className={`btn-icon ${isLiked ? 'heart-active' : ''}`} 
+                    onClick={() => setIsLiked(!isLiked)}
+                    title={isLiked ? "Liked" : "Like song"}
+                  >
+                    ♥
+                  </button>
                 </div>
               </div>
 
               {/* Animated Glowing Sound Wave Visualizer */}
-              <div className="visualizer-container">
+              <div className="visualizer-container" onClick={() => setIsPlaying(!isPlaying)}>
                 <div className={`wave-bars ${isPlaying ? 'animating' : ''}`}>
                   {[40, 65, 85, 30, 95, 55, 75, 45, 100, 70, 90, 40, 80, 60, 95, 35, 85, 50, 70, 90, 60, 40, 80, 55, 90, 70, 45, 85, 60, 30, 75, 90, 40, 80, 95, 50].map((h, i) => (
                     <span 
@@ -253,7 +314,15 @@ function App() {
               {/* Progress Slider */}
               <div className="player-progress-area">
                 <span className="time-text">{formatTime(currentPlaybackTime)}</span>
-                <div className="progress-bar-bg">
+                <div 
+                  className="progress-bar-bg"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percent = clickX / rect.width;
+                    setCurrentPlaybackTime(Math.floor(percent * totalPlaybackTime));
+                  }}
+                >
                   <div 
                     className="progress-bar-fill" 
                     style={{ width: `${(currentPlaybackTime / totalPlaybackTime) * 100}%` }}
@@ -266,10 +335,10 @@ function App() {
 
               {/* Player Controls */}
               <div className="player-controls">
-                <button className="ctrl-btn" title="Shuffle">
+                <button className="ctrl-btn" onClick={shuffleSong} title="Shuffle playlist">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
                 </button>
-                <button className="ctrl-btn" title="Previous">
+                <button className="ctrl-btn" onClick={playPrevSong} title="Previous song">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2"></line></svg>
                 </button>
                 
@@ -285,10 +354,14 @@ function App() {
                   )}
                 </button>
 
-                <button className="ctrl-btn" title="Next">
+                <button className="ctrl-btn" onClick={playNextSong} title="Next song">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="2"></line></svg>
                 </button>
-                <button className="ctrl-btn" title="Repeat">
+                <button 
+                  className={`ctrl-btn ${isRepeat ? 'active-ctrl' : ''}`} 
+                  onClick={() => setIsRepeat(!isRepeat)} 
+                  title="Toggle Repeat"
+                >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                 </button>
               </div>
@@ -299,16 +372,19 @@ function App() {
 
       {/* Main Content Area */}
       <main className="main-content">
-        {/* Trending Now / Mood Cards Grid */}
+        {/* Trending Moods Filter Grid */}
         <section className="section-trending" id="explore">
           <div className="section-header">
-            <h2 className="section-title">Trending Now</h2>
+            <h2 className="section-title">Explore by Mood</h2>
             <div className="mood-filter-pills">
               {['All', 'Chill', 'Normal', 'Energetic'].map(mood => (
                 <button 
                   key={mood}
                   className={`filter-pill ${activeMoodFilter === mood ? 'active' : ''}`}
-                  onClick={() => setActiveMoodFilter(mood)}
+                  onClick={() => {
+                    setActiveMoodFilter(mood);
+                    scrollToSection('library');
+                  }}
                 >
                   {mood}
                 </button>
@@ -323,6 +399,7 @@ function App() {
                 className="mood-card"
                 onClick={() => {
                   setActiveMoodFilter(m.tag);
+                  scrollToSection('library');
                 }}
               >
                 <div className="mood-card-img-wrap">
@@ -334,56 +411,21 @@ function App() {
                 <div className="mood-card-details">
                   <h4 className="mood-name">{m.name}</h4>
                   <p className="mood-desc">{m.desc}</p>
-                  <span className="mood-count">{m.count}</span>
+                  <span className="mood-count">Filter {m.tag}</span>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Feature Highlights Row */}
-        <section className="features-row">
-          <div className="feature-item">
-            <div className="feature-icon-box">
-              <span>🎵</span>
-            </div>
-            <h4>Millions of Songs</h4>
-            <p>Access endless tracks across every genre and mood category.</p>
-          </div>
-
-          <div className="feature-item">
-            <div className="feature-icon-box">
-              <span>✨</span>
-            </div>
-            <h4>Personalized AI</h4>
-            <p>Smart energy-based clustering and cosine similarity matching.</p>
-          </div>
-
-          <div className="feature-item">
-            <div className="feature-icon-box">
-              <span>📥</span>
-            </div>
-            <h4>Upload & Match</h4>
-            <p>Import custom CSV playlists and cluster in one click.</p>
-          </div>
-
-          <div className="feature-item">
-            <div className="feature-icon-box">
-              <span>💻</span>
-            </div>
-            <h4>Any Device</h4>
-            <p>Seamless music streaming across all your devices anywhere.</p>
-          </div>
-        </section>
-
-        {/* Interactive Fretly Workspace */}
+        {/* Songs Library Workspace */}
         <section className="library-section" id="library">
-          {/* Upload & Cluster Action Bar */}
+          {/* Quick Action Box */}
           <div className="workspace-control-card">
             <div className="control-card-header">
               <div>
-                <h3>Upload & Cluster Playlist</h3>
-                <p>Add new songs via CSV to generate intelligent mood classifications</p>
+                <h3>Playlist Control & AI Cluster</h3>
+                <p>Upload new CSV playlist tracks and run K-Means mood clustering</p>
               </div>
               <div className="control-actions">
                 <button 
@@ -391,7 +433,7 @@ function App() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
                 >
-                  📁 Select CSV
+                  📁 Upload CSV
                 </button>
                 <button 
                   className="btn-gradient-glow"
@@ -404,20 +446,27 @@ function App() {
             </div>
           </div>
 
-          {/* Songs Table */}
+          {/* Songs Table Card */}
           <div className="songs-table-card">
             <div className="table-header-bar">
               <div className="table-title">
                 <span className="neon-note">🎶</span>
                 <h3>All Songs ({filteredSongs.length})</h3>
               </div>
-              <span className="table-subtext">Click "💡 Get Similar" to view AI recommendations</span>
+              <div className="table-actions-right">
+                {activeMoodFilter !== 'All' && (
+                  <button className="filter-reset-btn" onClick={() => setActiveMoodFilter('All')}>
+                    Show All ({songs.length})
+                  </button>
+                )}
+                <span className="table-subtext">Click any song to play • Click "💡 Get Similar" for AI match</span>
+              </div>
             </div>
 
             {filteredSongs.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">🎵</div>
-                <p>No songs found for this filter. Upload songs or click "All"!</p>
+                <p>No songs found for this filter. Upload a CSV file to get started!</p>
                 <button className="btn-gradient-glow" onClick={() => fileInputRef.current?.click()}>
                   Upload songs.csv
                 </button>
@@ -435,54 +484,63 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSongs.map((song, i) => (
-                      <tr 
-                        key={song.song_id} 
-                        className={selectedSong?.song_id === song.song_id ? 'active-row' : ''}
-                        onClick={() => setSelectedSong(song)}
-                      >
-                        <td className="col-index">{i + 1}</td>
-                        <td className="col-track">
-                          <div className="track-info">
-                            <div className="track-avatar">
-                              <span>🎵</span>
+                    {filteredSongs.map((song, i) => {
+                      const isRowSelected = selectedSong?.song_id === song.song_id;
+                      return (
+                        <tr 
+                          key={song.song_id} 
+                          className={isRowSelected ? 'active-row' : ''}
+                          onClick={() => {
+                            setSelectedSong(song);
+                            setIsPlaying(true);
+                            setCurrentPlaybackTime(0);
+                          }}
+                        >
+                          <td className="col-index">
+                            {isRowSelected && isPlaying ? "▶" : i + 1}
+                          </td>
+                          <td className="col-track">
+                            <div className="track-info">
+                              <div className="track-avatar">
+                                <span>{isRowSelected ? "🎵" : "🎧"}</span>
+                              </div>
+                              <div>
+                                <div className="track-name">{song.name}</div>
+                                <div className="track-artist">{song.artist}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="track-name">{song.name}</div>
-                              <div className="track-artist">{song.artist}</div>
+                          </td>
+                          <td className="col-energy">
+                            <div className="energy-meter-container">
+                              <div className="energy-bar-bg">
+                                <div 
+                                  className="energy-bar-fill" 
+                                  style={{ width: `${Math.min(100, Math.max(10, song.energy * 100))}%` }}
+                                ></div>
+                              </div>
+                              <span className="energy-val">{(song.energy * 100).toFixed(0)}%</span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="col-energy">
-                          <div className="energy-meter-container">
-                            <div className="energy-bar-bg">
-                              <div 
-                                className="energy-bar-fill" 
-                                style={{ width: `${Math.min(100, Math.max(10, song.energy * 100))}%` }}
-                              ></div>
-                            </div>
-                            <span className="energy-val">{(song.energy * 100).toFixed(0)}%</span>
-                          </div>
-                        </td>
-                        <td className="col-mood">
-                          <span className={`neon-pill pill-${song.mood?.toLowerCase() || 'default'}`}>
-                            {song.mood || 'Unclustered'}
-                          </span>
-                        </td>
-                        <td className="col-action">
-                          <button 
-                            className="btn-similar-pill"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              getRecommendations(song);
-                            }}
-                            disabled={loading}
-                          >
-                            💡 Get Similar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="col-mood">
+                            <span className={`neon-pill pill-${song.mood?.toLowerCase() || 'default'}`}>
+                              {song.mood || 'Unclustered'}
+                            </span>
+                          </td>
+                          <td className="col-action">
+                            <button 
+                              className="btn-similar-pill"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                getRecommendations(song);
+                              }}
+                              disabled={loading}
+                            >
+                              💡 Get Similar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -490,104 +548,86 @@ function App() {
           </div>
 
           {/* AI Recommendations Panel */}
-          {selectedSong && (
-            <div className="recommendations-container" id="recommendations">
-              <div className="rec-header">
-                <div className="rec-tag">AI RECOMMENDATIONS</div>
-                <h2>Similar Tracks to <span className="gradient-text">"{selectedSong.name}"</span></h2>
+          <div className="recommendations-container" id="recommendations">
+            <div className="rec-header">
+              <div className="rec-tag">AI RECOMMENDATION ENGINE</div>
+              <h2>
+                {selectedSong ? (
+                  <>Similar Tracks to <span className="gradient-text">"{selectedSong.name}"</span></>
+                ) : (
+                  "Select a Song to View Recommendations"
+                )}
+              </h2>
+              {selectedSong && (
                 <div className="selected-song-pill">
                   <span>Artist: <strong>{selectedSong.artist}</strong></span>
                   <span>Energy: <strong>{(selectedSong.energy * 100).toFixed(0)}%</strong></span>
                   <span>Mood: <strong>{selectedSong.mood}</strong></span>
                 </div>
-              </div>
-
-              {recommendations.length === 0 ? (
-                <div className="rec-prompt-box">
-                  <p>Click <strong>"💡 Get Similar"</strong> on any song above to generate instant cosine-similarity match rankings!</p>
-                  <button className="btn-gradient-glow" onClick={() => getRecommendations(selectedSong)}>
-                    Analyze & Recommend Now
-                  </button>
-                </div>
-              ) : (
-                <div className="rec-cards-grid">
-                  {recommendations.map((rec) => (
-                    <div 
-                      key={rec.song_id} 
-                      className="rec-card"
-                      onClick={() => setSelectedSong(rec)}
-                    >
-                      <div className="rec-card-top">
-                        <div className="rec-badge-similarity">
-                          {(rec.similarity * 100).toFixed(0)}% MATCH
-                        </div>
-                        <span className={`neon-pill pill-${rec.mood?.toLowerCase() || 'default'}`}>
-                          {rec.mood}
-                        </span>
-                      </div>
-
-                      <div className="rec-card-body">
-                        <div className="rec-avatar">🎵</div>
-                        <h4 className="rec-song-name">{rec.name}</h4>
-                        <p className="rec-artist-name">{rec.artist}</p>
-                      </div>
-
-                      <div className="rec-card-footer">
-                        <div className="rec-energy-row">
-                          <span>Energy</span>
-                          <span>{(rec.energy * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="energy-bar-bg small">
-                          <div 
-                            className="energy-bar-fill" 
-                            style={{ width: `${Math.min(100, Math.max(10, rec.energy * 100))}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               )}
             </div>
-          )}
-        </section>
 
-        {/* Bottom Banner - Go Premium */}
-        <section className="premium-banner" id="premium">
-          <div className="banner-content">
-            <div className="banner-text">
-              <h2>
-                Go <span className="gradient-text">Premium.</span><br />
-                Feel the Difference.
-              </h2>
-              <p>Ad-free listening, unlimited skips, offline downloads, and instant AI clustering.</p>
-              <button className="btn-banner-glow">
-                Try Premium Free →
-              </button>
-            </div>
+            {recommendations.length === 0 ? (
+              <div className="rec-prompt-box">
+                <p>Click <strong>"💡 Get Similar"</strong> next to any track in the table above to calculate instant energy similarity rankings!</p>
+                {selectedSong && (
+                  <button className="btn-gradient-glow" onClick={() => getRecommendations(selectedSong)}>
+                    Find Similar to "{selectedSong.name}"
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="rec-cards-grid">
+                {recommendations.map((rec) => (
+                  <div 
+                    key={rec.song_id} 
+                    className="rec-card"
+                    onClick={() => {
+                      setSelectedSong(rec);
+                      setIsPlaying(true);
+                      setCurrentPlaybackTime(0);
+                      scrollToSection('home');
+                    }}
+                  >
+                    <div className="rec-card-top">
+                      <div className="rec-badge-similarity">
+                        {(rec.similarity * 100).toFixed(0)}% MATCH
+                      </div>
+                      <span className={`neon-pill pill-${rec.mood?.toLowerCase() || 'default'}`}>
+                        {rec.mood}
+                      </span>
+                    </div>
+
+                    <div className="rec-card-body">
+                      <div className="rec-avatar">🎵</div>
+                      <h4 className="rec-song-name">{rec.name}</h4>
+                      <p className="rec-artist-name">{rec.artist}</p>
+                    </div>
+
+                    <div className="rec-card-footer">
+                      <div className="rec-energy-row">
+                        <span>Energy</span>
+                        <span>{(rec.energy * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="energy-bar-bg small">
+                        <div 
+                          className="energy-bar-fill" 
+                          style={{ width: `${Math.min(100, Math.max(10, rec.energy * 100))}%` }}
+                        ></div>
+                      </div>
+                      <button className="btn-play-rec">▶ Play & Select</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
-
-        {/* Bottom Brand Rating Bar */}
-        <div className="brand-footer-bar">
-          <div className="brand-footer-info">
-            <div className="footer-wave-icon">|||||</div>
-            <div>
-              <strong>Fretly</strong>
-              <span>Your music. Your vibe.</span>
-            </div>
-          </div>
-          <div className="brand-rating">
-            <span className="rating-score">4.8</span>
-            <span className="stars">★★★★★</span>
-            <span className="reviews">50K+ Reviews</span>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
       <footer className="footer">
-        <p>© 2026 Fretly • AI-Powered Music Recommendation System</p>
+        <p>© 2026 Fretly • AI-Powered Music Recommendation Engine</p>
       </footer>
     </div>
   );
