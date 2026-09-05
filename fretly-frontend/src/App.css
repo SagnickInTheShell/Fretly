@@ -34,7 +34,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.sonicwave-app {
+.fretly-app {
   min-height: 100vh;
   position: relative;
   display: flex;

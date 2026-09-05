@@ -124,7 +124,7 @@ function App() {
   const currentSongEnergy = selectedSong?.energy !== undefined ? selectedSong.energy : 0.85;
 
   return (
-    <div className="sonicwave-app">
+    <div className="fretly-app">
       {/* Background Glowing Ambient Light Trails */}
       <div className="ambient-glow ambient-glow-pink"></div>
       <div className="ambient-glow ambient-glow-purple"></div>
@@ -138,7 +138,7 @@ function App() {
             <div className="brand-waves">
               <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <span className="brand-name">SonicWave <span className="brand-badge">Fretly</span></span>
+            <span className="brand-name">FRETLY</span>
           </div>
 
           <div className="nav-links">
@@ -573,7 +573,7 @@ function App() {
           <div className="brand-footer-info">
             <div className="footer-wave-icon">|||||</div>
             <div>
-              <strong>SonicWave</strong>
+              <strong>Fretly</strong>
               <span>Your music. Your vibe.</span>
             </div>
           </div>
@@ -587,7 +587,7 @@ function App() {
 
       {/* Footer */}
       <footer className="footer">
-        <p>© 2026 SonicWave • Powered by Fretly AI Music Engine</p>
+        <p>© 2026 Fretly • AI-Powered Music Recommendation System</p>
       </footer>
     </div>
   );
