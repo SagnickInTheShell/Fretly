@@ -15,7 +15,7 @@ function App() {
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const fileInputRef = useRef(null);
 
-  const API_URL = "http://127.0.0.1:8000";
+  const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
 
   const fetchSongs = async () => {
     try {
@@ -32,7 +32,20 @@ function App() {
 
   useEffect(() => {
     fetchSongs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const openSpotifyStream = (songName, artist) => {
+    if (!songName) return;
+    const query = encodeURIComponent(`${songName} ${artist || ''}`.trim());
+    window.open(`https://open.spotify.com/search/${query}`, '_blank');
+  };
+
+  const openYouTubeStream = (songName, artist) => {
+    if (!songName) return;
+    const query = encodeURIComponent(`${songName} ${artist || ''}`.trim());
+    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+  };
 
   // Timer simulation for player
   useEffect(() => {
@@ -75,26 +88,31 @@ function App() {
 
   const uploadSpotify = async () => {
     if (!spotifyUrl.trim()) {
-      alert("Please enter a valid Spotify playlist URL");
+      alert("Please enter a valid Spotify playlist URL (e.g. https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M)");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/upload-spotify?playlist_url=${encodeURIComponent(spotifyUrl.trim())}`, {
+      const response = await fetch(`${API_URL}/upload-spotify`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: spotifyUrl.trim() }),
       });
+
       const data = await response.json();
-      if (data.status === "success") {
-        alert(`✅ Uploaded ${data.songs_uploaded} songs from Spotify!`);
+
+      if (data.status === "success" && data.songs_uploaded > 0) {
+        alert(`✅ Imported ${data.songs_uploaded} songs from "${data.playlist_name || 'Spotify'}"!`);
         setSpotifyUrl("");
         await fetchSongs();
         scrollToSection('library');
       } else {
-        alert(`❌ Spotify upload failed: ${data.message}`);
+        alert(`❌ Import failed: ${data.message || 'Could not load playlist tracks. Please ensure the playlist is public.'}`);
       }
     } catch (error) {
-      alert("❌ Spotify upload failed! Make sure backend is running.");
+      console.error('Spotify import error:', error);
+      alert('❌ Spotify import failed! Make sure the backend server is running.');
     }
     setLoading(false);
   };
@@ -313,6 +331,26 @@ function App() {
                 </div>
                 <div className="player-top-actions">
                   <button 
+                    className="btn-stream-spotify"
+                    onClick={() => openSpotifyStream(currentSongName, currentSongArtist)}
+                    title="Stream on Spotify"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.495 17.307c-.216.353-.675.466-1.028.25-2.82-1.722-6.37-2.112-10.55-1.157-.403.092-.803-.162-.895-.565-.092-.403.162-.803.565-.895 4.575-1.045 8.508-.6 11.658 1.339.353.216.466.675.25 1.028zm1.467-3.26c-.272.443-.855.584-1.298.312-3.228-1.984-8.148-2.557-11.965-1.399-.5.152-1.029-.133-1.181-.633-.152-.5.133-1.029.633-1.181 4.363-1.324 9.789-.687 13.499 1.597.443.272.584.855.312 1.304zm.126-3.41c-3.87-2.298-10.254-2.51-13.939-1.391-.595.181-1.228-.157-1.409-.752-.181-.595.157-1.228.752-1.409 4.237-1.287 11.282-1.042 15.748 1.61.536.319.712 1.013.393 1.549-.319.536-1.013.712-1.545.393z"/>
+                    </svg>
+                    <span>Spotify</span>
+                  </button>
+                  <button 
+                    className="btn-stream-yt"
+                    onClick={() => openYouTubeStream(currentSongName, currentSongArtist)}
+                    title="Play on YouTube"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                    <span>YouTube</span>
+                  </button>
+                  <button 
                     className={`btn-icon ${isLiked ? 'heart-active' : ''}`} 
                     onClick={() => setIsLiked(!isLiked)}
                     title={isLiked ? "Liked" : "Like song"}
@@ -479,7 +517,7 @@ function App() {
                 <input 
                   type="text" 
                   className="spotify-input"
-                  placeholder="Paste Spotify Playlist URL (e.g. https://open.spotify.com/playlist/...)"
+                  placeholder="Paste Spotify Playlist URL (e.g. https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M)"
                   value={spotifyUrl}
                   onChange={(e) => setSpotifyUrl(e.target.value)}
                   disabled={loading}
@@ -490,7 +528,7 @@ function App() {
                 onClick={uploadSpotify}
                 disabled={loading}
               >
-                {loading ? "Importing..." : "Import from Spotify"}
+                {loading ? "Importing..." : "⚡ Import Playlist"}
               </button>
             </div>
           </div>
@@ -576,16 +614,28 @@ function App() {
                             </span>
                           </td>
                           <td className="col-action">
-                            <button 
-                              className="btn-similar-pill"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                getRecommendations(song);
-                              }}
-                              disabled={loading}
-                            >
-                              💡 Get Similar
-                            </button>
+                            <div className="table-action-group">
+                              <button 
+                                className="btn-stream-pill-mini"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openSpotifyStream(song.name, song.artist);
+                                }}
+                                title="Stream full song on Spotify"
+                              >
+                                🟢 Stream
+                              </button>
+                              <button 
+                                className="btn-similar-pill"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  getRecommendations(song);
+                                }}
+                                disabled={loading}
+                              >
+                                💡 Get Similar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -664,7 +714,19 @@ function App() {
                           style={{ width: `${Math.min(100, Math.max(10, rec.energy * 100))}%` }}
                         ></div>
                       </div>
-                      <button className="btn-play-rec">▶ Play & Select</button>
+                      <div className="rec-card-actions-row">
+                        <button className="btn-play-rec">▶ Play</button>
+                        <button 
+                          className="btn-stream-rec"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSpotifyStream(rec.name, rec.artist);
+                          }}
+                          title="Stream full song on Spotify"
+                        >
+                          🟢 Stream
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

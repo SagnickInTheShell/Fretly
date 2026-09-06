@@ -18,3 +18,9 @@ __pycache__/
 # IDE & Editor files
 .vscode/
 .idea/
+
+# Frontend
+fretly-frontend/build/
+fretly-frontend/node_modules/
+.cache/
+
